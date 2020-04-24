@@ -351,5 +351,28 @@ vows.describe('Client').addBatch({
         assert.strictEqual(error.body, BROKEN_XML.toString())
       }
     }
+  , 'with a timeout set' : {
+      topic: function () {
+        var that = this
+        http.createServer(function(request, response) {
+          setTimeout(function () {
+            response.writeHead(200, {'Content-Type': 'text/xml'})
+            var data = '<?xml version="2.0" encoding="UTF-8"?>'
+              + '<methodResponse>'
+              + '<params></params>'
+              + '</methodResponse>'
+            response.write(data)
+            response.end()
+          }, 10000)
+        }).listen(9098, 'localhost', function() {
+          var client = new Client({ host: 'localhost', port: 9098, path: '/', timeout: 100}, false)
+          client.methodCall('any', null, function (error) {that.callback(error)})
+        })
+      }
+    , 'return timeout Error' : function (error, value) {
+        assert.isObject(error)
+        assert.equal(error.message, 'socket hang up')
+      }
+    }
   }
 }).export(module)
